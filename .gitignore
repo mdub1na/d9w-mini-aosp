@@ -1,0 +1,8 @@
+__pycache__/
+local/
+work/
+out/
+*.apk
+*.img
+*.bin
+*.zip

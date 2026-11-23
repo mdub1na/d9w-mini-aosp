@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "status": "OFFICIAL_SUPERPROJECT_REVISIONS_VERIFIED",
+  "target_api": 31,
+  "tag": "android-12.0.0_r34",
+  "manifest": {
+    "repository": "https://android.googlesource.com/platform/manifest",
+    "commit": "2ad7a0b216d6eeeceea5ca4881c4d888c1692d60",
+    "default_xml_sha256": "2be460765411c896226cf80ed9f6d58c7fe3b6cd448938f6b481bf88d1f0d75d",
+    "project_count": 1048,
+    "all_project_commit_lock_available": true
+  },
+  "superproject": {
+    "repository": "https://android.googlesource.com/platform/superproject",
+    "commit": "aa35b67d6a5a15181c6d50dccd3470d776d3e4c0",
+    "manifest_commit_from_supermanifest": "2ad7a0b216d6eeeceea5ca4881c4d888c1692d60",
+    "matched_project_gitlinks": 1048,
+    "project_revision_table_format": "UTF-8 lines sorted by path, tab-separated path, project name and commit, LF terminated",
+    "project_revision_table_sha256": "118aa61f6d7e16df784b9c9c35e016733d0659ade354bcbf189d264e8e8e1a46"
+  },
+  "build_make": {
+    "repository": "https://android.googlesource.com/platform/build",
+    "commit": "80c4eeb63ae4d1b25a4be66a8fc9e0d7d6bdbdae",
+    "verified_files": {
+      "core/board_config.mk": "3ecb6cddcffefab32c31807d62468320e938eac0566e573bc32449634aed6470",
+      "core/Makefile": "a52147cf2d0a23545771e7c63614bb863aed98589e7ceb034bf480c0d72b32d7",
+      "core/config.mk": "5059abd8c02569a2fbe3d75b1d7accf7680eeb5a5149fad0782f6e05e6159b46",
+      "core/product_config.mk": "3e0a530b0baa35d2a9c4c15702eaf801afe971020aa3f6f3a8db777ea87840e2",
+      "core/main.mk": "971b6dc659ea8f78212017223d0531e2520e74894d947f028c683277e83a52ce",
+      "target/product/base_system.mk": "578da70fa55c8526d3bff2e10bfdc9a7f125af4cb37ce8297150e4384684fd6e",
+      "target/product/core_minimal.mk": "5204bb8c0729c1c93002bc0326438232f877bc6936407bc05e69b3754f4f17e5"
+    }
+  },
+  "source_sync_performed": false,
+  "image_status": "NOT_FLASHABLE",
+  "device_trial_ready": false,
+  "verified_rules": {
+    "current_vndk": {
+      "url": "https://android.googlesource.com/platform/build/+/80c4eeb63ae4d1b25a4be66a8fc9e0d7d6bdbdae/core/board_config.mk#740",
+      "meaning": "Use current when the board uses the platform VNDK version. On API 31 this selects VNDK 31."
+    },
+    "legacy_sar": {
+      "url": "https://android.googlesource.com/platform/build/+/80c4eeb63ae4d1b25a4be66a8fc9e0d7d6bdbdae/core/board_config.mk#329",
+      "meaning": "Legacy System-as-root is supported; dynamic partitions must be false."
+    },
+    "image_producers": {
+      "url": "https://android.googlesource.com/platform/build/+/80c4eeb63ae4d1b25a4be66a8fc9e0d7d6bdbdae/core/board_config.mk#334",
+      "meaning": "PRODUCT_BUILD_*_IMAGE=false suppresses resolved BUILDING_*_IMAGE flags."
+    },
+    "treble_requirements": {
+      "url": "https://android.googlesource.com/platform/build/+/80c4eeb63ae4d1b25a4be66a8fc9e0d7d6bdbdae/core/config.mk#617",
+      "meaning": "With unknown shipping API, PRODUCT_FULL_TREBLE_OVERRIDE=true requires VINTF/linker/split-policy checks; it does not prove compatibility."
+    }
+  }
+}
