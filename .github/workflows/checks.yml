@@ -16,3 +16,4 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 -E -B -m unittest discover -s tests -p test_aosp12_config.py -v
+      - run: python3 -E -B -m unittest discover -s tests -p 'test_recovery_*.py' -v

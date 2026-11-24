@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<recovery>
+    <resources>
+        <font name="d9w_panel_heading" filename="RobotoCondensed-Regular.ttf" size="37"/>
+        <font name="d9w_panel_body" filename="RobotoCondensed-Regular.ttf" size="22"/>
+        <font name="d9w_panel_detail" filename="RobotoCondensed-Regular.ttf" size="17"/>
+    </resources>
+    <variables>
+        <variable name="d9w_panel_operation" value="Recovery operation"/>
+        <variable name="d9w_panel_status" value="Waiting for status"/>
+        <variable name="d9w_panel_phase" value=""/>
+        <variable name="d9w_panel_counter" value=""/>
+        <variable name="d9w_panel_show_bar" value="0"/>
+        <variable name="d9w_panel_percent" value="0"/>
+        <variable name="d9w_panel_link" value="Link unobserved"/>
+    </variables>
+    <pages>
+        <page name="d9w_operation_status">
+            <background color="#0C1119"/>
+            <fill color="#152030">
+                <placement x="76" y="60" w="648" h="360"/>
+            </fill>
+            <text color="#BCD0EA">
+                <font resource="d9w_panel_detail"/>
+                <placement x="400" y="92" placement="5"/>
+                <text>%d9w_panel_operation%</text>
+            </text>
+            <text color="#F3F7FD">
+                <font resource="d9w_panel_heading"/>
+                <placement x="400" y="132" placement="5"/>
+                <text>%d9w_panel_status%</text>
+            </text>
+            <text color="#DBE8F8">
+                <font resource="d9w_panel_body"/>
+                <placement x="400" y="204" placement="5"/>
+                <text>%d9w_panel_phase%</text>
+            </text>
+            <progressbar>
+                <condition var1="d9w_panel_show_bar" var2="1"/>
+                <placement x="230" y="248"/>
+                <resource empty="progress_empty" full="progress_full"/>
+                <data name="d9w_panel_percent" max="100"/>
+            </progressbar>
+            <text color="#DBE8F8">
+                <font resource="d9w_panel_body"/>
+                <placement x="400" y="293" placement="5"/>
+                <text>%d9w_panel_counter%</text>
+            </text>
+            <fill color="#263750">
+                <placement x="124" y="348" w="552" h="1"/>
+            </fill>
+            <text color="#BCD0EA">
+                <font resource="d9w_panel_detail"/>
+                <placement x="400" y="366" placement="5"/>
+                <text>%d9w_panel_link%</text>
+            </text>
+        </page>
+    </pages>
+</recovery>
