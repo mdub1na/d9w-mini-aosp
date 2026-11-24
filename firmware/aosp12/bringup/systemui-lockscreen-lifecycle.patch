@@ -1,0 +1,51 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java
+@@ -34,6 +34,7 @@
+ import android.view.View;
+ import android.view.ViewGroup;
+ import android.view.ViewRootImpl;
++import android.view.WindowInsetsController;
+ import android.view.WindowManagerGlobal;
+
+ import androidx.annotation.NonNull;
+@@ -561,19 +562,34 @@
+
+     @Override
+     public void onStartedWakingUp() {
+-        mStatusBar.getNotificationShadeWindowView().getWindowInsetsController()
+-                .setAnimationsDisabled(false);
++        setShadeAnimationsDisabled(false);
+     }
+
+     @Override
+     public void onStartedGoingToSleep() {
+-        mStatusBar.getNotificationShadeWindowView().getWindowInsetsController()
+-                .setAnimationsDisabled(true);
++        setShadeAnimationsDisabled(true);
++    }
++
++    private void setShadeAnimationsDisabled(boolean disabled) {
++        // The TV status bar does not register the phone notification shade.
++        if (mStatusBar == null) {
++            return;
++        }
++        final NotificationShadeWindowView shade = mStatusBar.getNotificationShadeWindowView();
++        if (shade == null) {
++            return;
++        }
++        final WindowInsetsController controller = shade.getWindowInsetsController();
++        if (controller != null) {
++            controller.setAnimationsDisabled(disabled);
++        }
+     }
+
+     @Override
+     public void onFinishedGoingToSleep() {
+-        mBouncer.onScreenTurnedOff();
++        if (mBouncer != null) {
++            mBouncer.onScreenTurnedOff();
++        }
+     }
+
+     @Override

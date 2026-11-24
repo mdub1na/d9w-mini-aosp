@@ -3,6 +3,8 @@ import importlib.util
 from pathlib import Path
 import unittest
 
+from aosp12_boot_services import verify_lifecycle
+
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('aosp12_config', ROOT/'firmware/aosp12/check_config.py')
 C = importlib.util.module_from_spec(spec)
@@ -19,6 +21,21 @@ def fixture():
 
 
 class Aosp12Configuration(unittest.TestCase):
+    def test_boot_services_preset_is_separate_from_the_default_product(self):
+        device = ROOT / "firmware/aosp12/device"
+        for path in device.glob("*.mk"):
+            self.assertNotIn("boot-services.mk", path.read_text(encoding="utf-8"))
+        preset = ROOT / "firmware/aosp12/bringup/boot-services.mk"
+        body = " ".join(
+            line.strip().removesuffix("\\").strip()
+            for line in preset.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+        self.assertEqual(body, "PRODUCT_PACKAGES += FusedLocation ModuleMetadata")
+
+    def test_systemui_sleep_wake_with_and_without_phone_shade(self):
+        verify_lifecycle(ROOT / "firmware/aosp12/bringup/systemui-lockscreen-lifecycle.patch")
+
     def test_reference_configuration_does_not_claim_api31_or_flashability(self):
         result = C.validate(fixture())
         self.assertTrue(result['configuration_checks_passed'])
