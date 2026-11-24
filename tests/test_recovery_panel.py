@@ -1,7 +1,10 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -97,6 +100,81 @@ class RecoveryPanelTest(unittest.TestCase):
                          {"background", "fill", "progressbar", "text"})
         for tag in ("action", "button", "slider", "touch"):
             self.assertIsNone(page.find(f".//{tag}"))
+
+    def test_hdpi_template_can_only_navigate_back_to_existing_menus(self):
+        path = RECOVERY / "twrp" / "d9w-operation-panel-hdpi.xml"
+        root = ET.parse(path).getroot()
+        defaults = {entry.attrib["name"] for entry in root.findall("./variables/variable")}
+        self.assertEqual(defaults, {*panel.panel_variables(snapshot()), "d9w_panel_hdpi_available"})
+        page = root.find("./pages/page[@name='d9w_operation_status']")
+        self.assertIsNotNone(page)
+        actions = page.findall(".//action[@function]")
+        self.assertEqual([(entry.attrib["function"], entry.text) for entry in actions],
+                         [("page", "advanced"), ("page", "advanced"), ("page", "main")])
+        for navigation in (*page.findall("button"), *page.findall("action")):
+            self.assertEqual(navigation.find("condition").attrib, {"var1": "tw_busy", "var2": "0"})
+        bar = page.find("progressbar")
+        self.assertEqual(bar.find("resource").attrib, {"empty": "progress_empty", "full": "progress_full"})
+        self.assertEqual(bar.find("placement").get("x"), str((1920 - 816) // 2))
+        for position in page.findall(".//placement"):
+            self.assertLessEqual(int(position.get("x")) + int(position.get("w", "0")), 1920)
+            self.assertLessEqual(int(position.get("y")) + int(position.get("h", "0")), 1200)
+
+    @unittest.skipUnless(os.environ.get("D9W_TWRP_SOURCE"), "R1 TeamWin source is unavailable")
+    def test_hdpi_theme_and_navigation_with_r1_source(self):
+        source = Path(os.environ["D9W_TWRP_SOURCE"]).resolve()
+        twrp = RECOVERY / "twrp"
+        files = ("gui/Android.bp", "gui/gui.cpp", "gui/theme/common/landscape.xml",
+                 "gui/theme/landscape_hdpi/ui.xml")
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            for filename in files:
+                target = work / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source / filename, target)
+            patch = str(twrp / "twrp-operation-panel.patch")
+            subprocess.run(["git", "apply", "--check", patch], cwd=work, check=True)
+            subprocess.run(["git", "apply", patch], cwd=work, check=True)
+            hdpi = work / "gui/theme/landscape_hdpi"
+            page = hdpi / "d9w-operation-panel-hdpi.xml"
+            shutil.copyfile(twrp / page.name, page)
+            theme = ET.parse(hdpi / "ui.xml").getroot()
+            self.assertEqual(theme.find("./details/resolution").attrib, {"width": "1920", "height": "1200"})
+            self.assertIn(page.name, {item.get("name") for item in theme.findall("./include/xmlfile")})
+            menus_path = work / "gui/theme/common/landscape.xml"
+            menus = ET.parse(menus_path).getroot()
+            entry = menus.find("./pages/page[@name='advanced']/button/action[.='d9w_operation_status']")
+            self.assertIsNotNone(entry)
+            self.assertEqual(entry.get("function"), "page")
+            self.assertIsNotNone(menus.find("./pages/page[@name='main']"))
+            for bar in ("progress_empty", "progress_full"):
+                image = theme.find(f"./resources/image[@name='{bar}']")
+                path = source / "gui/theme/landscape_hdpi/images" / (image.get("filename") + ".png")
+                with path.open("rb") as stream:
+                    header = stream.read(24)
+                self.assertEqual(struct.unpack(">II", header[16:24]), (816, 72))
+            for font in ET.parse(page).findall("./resources/font"):
+                self.assertTrue((source / "gui/theme/common/fonts" / font.get("filename")).is_file())
+            fixture = work / "recovery_panel_theme"
+            subprocess.run([os.environ.get("CXX", "c++"), "-std=c++11", "-I", str(source / "gui"),
+                            str(Path(__file__).with_name("recovery_panel_theme.cpp")),
+                            "-o", str(fixture)], check=True)
+            subprocess.run([str(fixture), str(hdpi / "ui.xml"), str(menus_path), str(page)], check=True)
+
+    def test_native_panel_reads_local_snapshot_with_a_disconnected_host(self):
+        native = RECOVERY / "native"
+        twrp = RECOVERY / "twrp"
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            core = work / "operation_status.o"
+            fixture = work / "recovery_panel_native"
+            subprocess.run([os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra", "-Werror",
+                            "-c", str(native / "operation_status.c"), "-o", str(core)], check=True)
+            subprocess.run([os.environ.get("CXX", "c++"), "-std=c++11", "-Wall", "-Wextra", "-Werror",
+                            "-I", str(native), "-I", str(twrp),
+                            str(Path(__file__).with_name("recovery_panel_native.cpp")),
+                            str(twrp / "d9w_operation_panel.cpp"), str(core), "-o", str(fixture)], check=True)
+            subprocess.run([str(fixture), directory], check=True)
 
     def test_cli_renders_variable_payload(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,168 @@
+--- a/uart-helper.c
++++ b/uart-helper.c
+@@ -5,6 +5,7 @@
+ #endif
+
+ #include "sha256.h"
++#include "operation_monitor.h"
+
+ #include <errno.h>
+ #include <fcntl.h>
+@@ -46,6 +47,7 @@
+ struct session {
+     int tty;
+     int folder;
++    int status_dir;
+     int64_t end;
+     const char *operations_dir;
+     bool allow_writes;
+@@ -57,13 +59,14 @@
+     const char *name;
+     const char *marker;
+     bool allows_job_id;
++    enum d9w_status_operation status_operation;
+ };
+
+ static const struct operation operations[] = {
+-    {"install", "D9W: AOSP SYSTEM AND DATA VERIFIED", true},
+-    {"restore", "D9W: PAIR RESTORE VERIFIED", true},
+-    {"collect", "D9W: log collection complete", false},
+-    {"reboot", "D9W: REBOOT REQUESTED", false},
++    {"install", "D9W: AOSP SYSTEM AND DATA VERIFIED", true, D9W_STATUS_OP_INSTALL},
++    {"restore", "D9W: PAIR RESTORE VERIFIED", true, D9W_STATUS_OP_RESTORE},
++    {"collect", "D9W: log collection complete", false, D9W_STATUS_OP_COLLECT},
++    {"reboot", "D9W: REBOOT REQUESTED", false, D9W_STATUS_OP_REBOOT},
+ };
+ enum { LEGACY_OPERATIONS = 2 };
+
+@@ -75,6 +78,7 @@
+     bool long_line;
+     bool verified;
+     bool uart_ok;
++    struct d9w_operation_monitor monitor;
+ };
+
+ #ifdef D9W_HOST_FIXTURE
+@@ -498,6 +502,7 @@
+         if (data[i] == '\n') {
+             if (!output->long_line) {
+                 output->line[output->line_size] = '\0';
++                (void)d9w_monitor_observe(&output->monitor, output->line);
+                 if (completion_marker(output->line, operation))
+                     output->verified = true;
+                 if (!strncmp(output->line, "D9W: STOP", sizeof("D9W: STOP") - 1))
+@@ -533,12 +538,37 @@
+     return 1;
+ }
+
++static void publish_state(const struct session *session, const struct operation *operation,
++                          enum d9w_status_state state)
++{
++    if (session->status_dir < 0)
++        return;
++    const struct d9w_operation_status status = {
++        .operation = operation->status_operation, .state = state,
++    };
++    (void)d9w_status_publish_at(session->status_dir, &status);
++}
++
++static void heartbeat(const struct session *session, const struct operation_output *output,
++                      int64_t *next)
++{
++    if (session->status_dir < 0)
++        return;
++    const int64_t now = ms_now();
++    if (now >= 0 && now >= *next) {
++        (void)d9w_status_publish_at(session->status_dir, &output->monitor.status);
++        *next = now + 1000;
++    }
++}
++
+ /* Return 2 to close the request session; no second operation is accepted. */
+ static int run_operation(const struct session *session, const struct operation *operation)
+ {
+     char path[512], reason[33];
+-    if (!preflight(session, operation, reason))
++    if (!preflight(session, operation, reason)) {
++        publish_state(session, operation, D9W_STATUS_STATE_BLOCKED);
+         return send_frame(session, response_deadline(session), "ERR %s\n", reason) ? -1 : 1;
++    }
+     if (!valid_operation_path(session, "do", operation, path))
+         return send_frame(session, response_deadline(session), "ERR script\n") ? -1 : 1;
+     const int log = open_operation_log(session);
+@@ -551,10 +581,14 @@
+
+     const pid_t child = launch_script(path, log);
+     struct operation_output output = {.uart_ok = true};
++    d9w_monitor_start(&output.monitor, operation->status_operation);
+     int code = 125;
+     bool readable = true;
++    bool finished_writer = child <= 0;
++    int64_t next_status = 0;
+     if (child > 0) {
+         for (;;) {
++            heartbeat(session, &output, &next_status);
+             /* Bound each drain round so that even prolific output is observed. */
+             for (int i = 0; readable && i < 16; ++i) {
+                 const int copied = relay_output(session, log, operation, &output);
+@@ -566,6 +600,7 @@
+             int status;
+             const pid_t finished = waitpid(child, &status, WNOHANG);
+             if (finished == child) {
++                finished_writer = true;
+                 if (WIFEXITED(status))
+                     code = WEXITSTATUS(status);
+                 else if (WIFSIGNALED(status))
+@@ -585,8 +620,18 @@
+         }
+     }
+     close(log);
++    const bool verified = !code && readable && output.verified;
++    if (!finished_writer) {
++        output.monitor.status.state = D9W_STATUS_STATE_UNKNOWN;
++    } else if (verified) {
++        output.monitor.status.state = operation->status_operation == D9W_STATUS_OP_REBOOT
++            ? D9W_STATUS_STATE_REBOOT_REQUESTED : D9W_STATUS_STATE_VERIFIED;
++    } else {
++        output.monitor.status.state = D9W_STATUS_STATE_FAILED;
++    }
++    next_status = 0;
++    heartbeat(session, &output, &next_status);
+     if (output.uart_ok && !stopping) {
+-        const bool verified = !code && readable && output.verified;
+         (void)send_frame(session, ms_now() + JOB_SEND_MS, "RESULT %s %d %s\n",
+                          operation->name, code, verified ? "VERIFIED" : "FAILED");
+     }
+@@ -620,6 +665,7 @@
+             const bool ready = preflight(session, operation, reason);
+             if (ready)
+                 *planned = operation;
++            publish_state(session, operation, ready ? D9W_STATUS_STATE_READY : D9W_STATUS_STATE_BLOCKED);
+             return send_frame(session, response_deadline(session), "PLAN %s %s %s\n", operation->name,
+                               ready ? "READY" : "BLOCKED", reason) ? -1 : 1;
+         }
+@@ -754,6 +800,15 @@
+     };
+     if (started < 0 || install_signals() || new_nonce(session.nonce))
+         return 1;
++    session.status_dir = -1;
++    if (harness) {
++#ifdef D9W_HOST_FIXTURE
++        const char *status_directory = usb;
++#else
++        const char *status_directory = "/tmp";
++#endif
++        session.status_dir = open(status_directory, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
++    }
+     session.folder = open_folder(usb, argv[2]);
+     session.tty = open(uart, O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW);
+     int rc = -1;
+@@ -775,6 +830,8 @@
+     }
+     if (session.folder >= 0)
+         close(session.folder);
++    if (session.status_dir >= 0)
++        close(session.status_dir);
+     if (rc) {
+         fputs("D9W UART helper stopped before completing the session\n", stderr);
+         return 1;
