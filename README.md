@@ -5,6 +5,7 @@
 - [Destiny](#destiny)
 - [Project structure](#project-structure)
 - [Stack and tools](#stack-and-tools)
+- [Firmware backlog](backlog.md)
 - [Run the configuration checks](#run-the-configuration-checks)
 - [Device status](#device-status)
 - [License](#license)
@@ -18,6 +19,8 @@ This repository provides an Android 12 AOSP device and product configuration for
 ```text
 .
 ├── .github/workflows/checks.yml # Host validation on GitHub Actions
+├── backlog.md                   # Firmware stages, priorities and acceptance tasks
+├── docs/backlog/                # One file per firmware task
 ├── docs/recovery-status.md      # Observed boot, UART recovery, and stock return
 ├── firmware/aosp12/
 │   ├── device/                 # Board and product Make configuration
@@ -49,7 +52,7 @@ The tests cover the target ABI, the Android version and Vendor interface selecti
 
 ## Device status
 
-A separate AOSP experiment reached the Android boot animation and an interactive UART shell. The projector powered off before its graphical interface loaded. UART subsequently opened the installed TWRP, and restoring the paired stock System and Data brought back Android. See the [recovery status](docs/recovery-status.md) for the observations and conditions.
+The diagnostic AOSP 12 trial reached the Android interface and recorded `BOOT_COMPLETED` on one unit. A previous trial verified UART entry to TWRP, restoration of paired stock System and Data, and return to stock Android. See the [bring-up evidence](docs/research/research-firmware-bringup.md) for what is ready to test next.
 
 ## License
 
