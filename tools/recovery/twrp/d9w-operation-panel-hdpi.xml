@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<recovery>
+    <resources>
+        <font name="d9w_panel_heading" filename="RobotoCondensed-Regular.ttf" size="88"/>
+        <font name="d9w_panel_body" filename="RobotoCondensed-Regular.ttf" size="52"/>
+        <font name="d9w_panel_detail" filename="RobotoCondensed-Regular.ttf" size="40"/>
+    </resources>
+    <variables>
+        <variable name="d9w_panel_hdpi_available" value="1"/>
+        <variable name="d9w_panel_operation" value="Recovery operation"/>
+        <variable name="d9w_panel_status" value="Waiting for status"/>
+        <variable name="d9w_panel_phase" value=""/>
+        <variable name="d9w_panel_counter" value=""/>
+        <variable name="d9w_panel_show_bar" value="0"/>
+        <variable name="d9w_panel_percent" value="0"/>
+        <variable name="d9w_panel_link" value="Link unobserved"/>
+    </variables>
+    <pages>
+        <page name="d9w_operation_status">
+            <background color="#0C1119"/>
+            <fill color="#152030">
+                <placement x="182" y="150" w="1556" h="900"/>
+            </fill>
+            <text color="#BCD0EA">
+                <font resource="d9w_panel_detail"/>
+                <placement x="960" y="230" placement="5"/>
+                <text>%d9w_panel_operation%</text>
+            </text>
+            <text color="#F3F7FD">
+                <font resource="d9w_panel_heading"/>
+                <placement x="960" y="330" placement="5"/>
+                <text>%d9w_panel_status%</text>
+            </text>
+            <text color="#DBE8F8">
+                <font resource="d9w_panel_body"/>
+                <placement x="960" y="510" placement="5"/>
+                <text>%d9w_panel_phase%</text>
+            </text>
+            <progressbar>
+                <condition var1="d9w_panel_show_bar" var2="1"/>
+                <placement x="552" y="620"/>
+                <resource empty="progress_empty" full="progress_full"/>
+                <data name="d9w_panel_percent" max="100"/>
+            </progressbar>
+            <text color="#DBE8F8">
+                <font resource="d9w_panel_body"/>
+                <placement x="960" y="732" placement="5"/>
+                <text>%d9w_panel_counter%</text>
+            </text>
+            <fill color="#263750">
+                <placement x="298" y="870" w="1324" h="2"/>
+            </fill>
+            <text color="#BCD0EA">
+                <font resource="d9w_panel_detail"/>
+                <placement x="960" y="915" placement="5"/>
+                <text>%d9w_panel_link%</text>
+            </text>
+            <button>
+                <condition var1="tw_busy" var2="0"/>
+                <placement x="780" y="1076" w="360" h="88"/>
+                <fill color="#263750"/>
+                <highlight color="#496083"/>
+                <font resource="d9w_panel_detail" color="#F3F7FD"/>
+                <text>{@back_btn=Back}</text>
+                <action function="page">advanced</action>
+            </button>
+            <action>
+                <condition var1="tw_busy" var2="0"/>
+                <touch key="back"/>
+                <action function="page">advanced</action>
+            </action>
+            <action>
+                <condition var1="tw_busy" var2="0"/>
+                <touch key="home"/>
+                <action function="page">main</action>
+            </action>
+        </page>
+    </pages>
+</recovery>

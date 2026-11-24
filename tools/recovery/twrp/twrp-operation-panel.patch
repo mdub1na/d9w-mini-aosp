@@ -1,0 +1,68 @@
+--- a/gui/Android.bp
++++ b/gui/Android.bp
+@@ -49,6 +49,8 @@
+     ],
+     srcs: [
+         "gui.cpp",
++        "d9w_operation_panel.cpp",
++        "operation_status.c",
+         "resources.cpp",
+         "pages.cpp",
+         "text.cpp",
+--- a/gui/gui.cpp
++++ b/gui/gui.cpp
+@@ -1,4 +1,5 @@
+ #include "d9w_keyboard_mouse.hpp"
++#include "d9w_operation_panel.hpp"
+ /*
+         Copyright 2012 bigbiff/Dees_Troy TeamWin
+         This file is part of TWRP/TeamWin Recovery Project.
+@@ -605,6 +606,16 @@
+ 				ors_command_read();
+ 		}
+
++		static d9w::OperationPanel operation_panel;
++		if (!blankTimer.isScreenOff() && PageManager::GetCurrentPage() == "d9w_operation_status") {
++			if (operation_panel.Poll("/tmp", [](const char* name, const char* value) {
++				DataManager::SetValue(name, value);
++			}))
++				gui_forceRender();
++		} else {
++			operation_panel.Leave();
++		}
++
+ 		if (!gForceRender.get_value())
+ 		{
+ 			int ret = PageManager::Update();
+--- a/gui/theme/landscape_hdpi/ui.xml
++++ b/gui/theme/landscape_hdpi/ui.xml
+@@ -11,6 +11,7 @@
+
+ 	<include>
+ 		<xmlfile name="landscape.xml"/>
++		<xmlfile name="d9w-operation-panel-hdpi.xml"/>
+ 	</include>
+
+ 	<resources>
+--- a/gui/theme/common/landscape.xml
++++ b/gui/theme/common/landscape.xml
+@@ -3720,6 +3720,19 @@
+ 				<placement x="%col1_x_header%" y="%row3_header_y%"/>
+ 				<text>{@advanced_hdr=Advanced}</text>
+ 			</text>
++
++			<button>
++				<conditions>
++					<condition var1="d9w_panel_hdpi_available" var2="1"/>
++					<condition var1="tw_busy" var2="0"/>
++				</conditions>
++				<placement x="1416" y="72" w="456" h="96"/>
++				<fill color="%background_color%"/>
++				<highlight color="%highlight_color%"/>
++				<font resource="font_m" color="%text_color%"/>
++				<text>Operation status</text>
++				<action function="page">d9w_operation_status</action>
++			</button>
+
+ 			<button style="main_button">
+ 				<placement x="%col1_x_left%" y="%row2_y%"/>
